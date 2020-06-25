@@ -1,5 +1,5 @@
 # Re-Gen
-A ReasonML generator library, designed for Deno.
+A ReasonML generator library, designed for Deno and Node.
 ## Goals
 1. Uses an open api, which allows for the usage of fully in-reason generators, as well as external ones (i.e. Deno.iter).
 2. Handling of sync and async generators.
