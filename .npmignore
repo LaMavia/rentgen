@@ -1,0 +1,5 @@
+src/?xternal*
+src/Main*
+data/*
+lib/*
+node_modules/*

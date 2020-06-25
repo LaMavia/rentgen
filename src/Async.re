@@ -1,4 +1,5 @@
 open Sync;
+open Helpers;
 type async('a) = Js.Promise.t('a);
 type next_async('a) = async(next('a));
 type gen_async('a) = {
@@ -119,17 +120,15 @@ let take_async = (gen, n) => {
 
   let aux = () =>
     gen->next_async
-    |> then_(nx =>
-         (
-           switch (nx.done_, i^) {
-           | (false, j) when j < n =>
-             i := j + 1;
-             {value: nx.value, done_: false};
-           | _ => {value: None, done_: true}
-           }
-         )
-         |> resolve
-       );
+    >> (
+      nx =>
+        switch (nx.done_, i^) {
+        | (false, j) when j < n =>
+          i := j + 1;
+          {value: nx.value, done_: false};
+        | _ => {value: None, done_: true}
+        }
+    );
 
   {
     next: aux,

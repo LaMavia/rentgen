@@ -1,5 +1,5 @@
 {
-  "name": "re-gen",
+  "name": "rentgen",
   "version": "0.1.0",
   "scripts": {
     "build": "bsb -make-world",
@@ -9,9 +9,23 @@
   "keywords": [
     "BuckleScript"
   ],
-  "author": "",
+  "author": "derivedmate",
   "license": "MIT",
   "devDependencies": {
     "bs-platform": "^7.3.2"
-  }
+  },
+  "description": "A ReasonML generator library, designed for Deno and Node",
+  "main": "src/BsGen.bs.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DerivedMate/rentgen.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DerivedMate/rentgen/issues"
+  },
+  "homepage": "https://github.com/DerivedMate/rentgen#readme"
 }
