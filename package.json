@@ -9,6 +9,7 @@
   "keywords": [
     "BuckleScript"
   ],
+  "type": "module",
   "author": "derivedmate",
   "license": "MIT",
   "devDependencies": {

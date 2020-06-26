@@ -22,18 +22,19 @@ external from: 'a => gen('b) = "%identity";
  * ```
  */
 let range = (~to_, ~from=0, ~step=1, ()) => {
-  let v = ref(from - step);
+  let v = ref(from);
   let aux: unit => next('b) =
     () => {
+      let v' = v^;
       v := v^ + step;
-      if (v^ > to_) {
+      if (v' > to_) {
         {value: None, done_: true};
       } else {
-        {value: Some(v^), done_: false};
+        {value: Some(v'), done_: false};
       };
     };
 
-  // Return a generator // 55
+  // Return a generator //
   {
     next: aux,
     return: a => {value: Some(a), done_: true},
@@ -100,13 +101,13 @@ let inf = (a0, f) => {
  */
 let map: (gen('a), 'a => 'b) => gen('b) =
   (gen, f) => {
-    let v = ref(gen->next);
     let aux: unit => next('b) =
       () =>
-        switch (v^.done_, v^.value) {
-        | (false, Some(a)) =>
-          v := gen->next;
-          {value: Some(f(a)), done_: false};
+        switch (gen->next) {
+        | {done_: false, value: Some(a)} => {
+            value: Some(f(a)),
+            done_: false,
+          }
         | _ => {value: None, done_: true}
         };
 
@@ -197,6 +198,29 @@ let foldl: (gen('a), ('b, 'a) => 'b, 'b) => 'b =
   };
 
 /**
+ * Folds a generator into a single value, taking the first value as `a0`.
+ * ```reason
+ * range(~to_=3, ~from=1,())
+ * ->map(float_of_int)
+ * ->foldl1((a, b) => a /. b)
+ * // => 1/6
+ * ```
+ */
+let foldl1: (gen('a), ('b, 'a) => 'b) => 'b =
+  (gen, f) => {
+    let rec aux = (nx, acc) =>
+      switch (nx.done_, nx.value) {
+      | (false, Some(v)) => aux(gen->next, f(acc, v))
+      | (false, None) => aux(gen->next, acc)
+      | (true, _) => acc
+      };
+    switch (gen->next) {
+    | {done_: false, value: Some(v)} => aux(gen->next, v)
+    | _ => raise(Js.Exn.raiseError("empty generator in foldl1"))
+    };
+  };
+
+/**
  * Takes n values of the generator or until it ends.
  * ```reason
  * inf(0, a => a + 1) -> take(5)
@@ -211,7 +235,7 @@ let take = (gen, n) => {
     switch (nx.done_, i^) {
     | (false, j) when j < n =>
       i := j + 1;
-      {value: nx.value, done_: false};
+      nx;
     | _ => {value: None, done_: true}
     };
   };
@@ -234,7 +258,7 @@ let take_while = (gen, f) => {
   let aux = () => {
     let nx = gen->next;
     switch (nx.done_, nx.value) {
-    | (false, Some(v)) when f(v) => {value: Some(v), done_: false}
+    | (false, Some(v)) when f(v) => nx
     | _ => {value: None, done_: true}
     };
   };

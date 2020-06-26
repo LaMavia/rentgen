@@ -1,5 +1,6 @@
 open Sync;
 open Helpers;
+open Js.Promise;
 type async('a) = Js.Promise.t('a);
 type next_async('a) = async(next('a));
 type gen_async('a) = {
@@ -26,12 +27,11 @@ external from_async: 'a => gen_async('b) = "%identity";
  * ```
  */
 let from_sync: gen('a) => gen_async('a) =
-  gen =>
-    Js.Promise.{
-      next: () => gen->next->resolve,
-      return: a => {value: Some(a), done_: true} |> resolve,
-      throw: _ => {value: None, done_: true} |> resolve,
-    };
+  gen => {
+    next: () => gen->next->resolve,
+    return: a => {value: Some(a), done_: true} |> resolve,
+    throw: _ => {value: None, done_: true} |> resolve,
+  };
 
 /**
  * Transforms an async generator into a new one.
@@ -43,19 +43,16 @@ let from_sync: gen('a) => gen_async('a) =
  */
 let map_async: (gen_async('a), 'a => 'b) => gen_async('b) =
   (gen, f) => {
-    open Js.Promise;
     let aux: unit => next_async('b) =
       () =>
         gen->next_async
-        |> then_(v =>
-             (
-               switch (v.done_, v.value) {
-               | (false, Some(v)) => {value: Some(f(v)), done_: false}
-               | _ => {value: None, done_: true}
-               }
-             )
-             |> resolve
-           );
+        >> (
+          v =>
+            switch (v.done_, v.value) {
+            | (false, Some(v)) => {value: Some(f(v)), done_: false}
+            | _ => v
+            }
+        );
 
     {
       next: aux,
@@ -75,14 +72,40 @@ let map_async: (gen_async('a), 'a => 'b) => gen_async('b) =
  */
 let foldl_async: (gen_async('a), ('b, 'a) => 'b, 'b) => async('b) =
   (gen, f, a0) => {
-    open Js.Promise;
-
     let rec aux = (acc, nx) =>
       switch (nx.done_, nx.value) {
       | (false, Some(v)) => gen |> next_async |> then_(aux(f(acc, v)))
       | _ => resolve(acc)
       };
     gen |> next_async |> then_(aux(a0));
+  };
+
+/**
+ * Folds an async generator into a single promise, taking the first value as `a0`.
+ * ```reason
+ * range(~to_=3, ~from=1, ())
+ * ->map(float_of_int)
+ * ->from_sync
+ * ->foldl1_async((a, b) => a /. b)
+ * // => async(1/6)
+ * ```
+ */
+let foldl1_async: (gen_async('a), ('b, 'a) => 'b) => async('b) =
+  (gen, f) => {
+    let rec aux = (acc, nx) =>
+      switch (nx.done_, nx.value) {
+      | (false, Some(v)) => gen |> next_async |> then_(aux(f(acc, v)))
+      | _ => resolve(acc)
+      };
+    gen
+    |> next_async
+    |> then_(nx =>
+         switch (nx) {
+         | {done_: false, value: Some(a0)} =>
+           gen |> next_async |> then_(aux(a0))
+         | _ => raise(Js.Exn.raiseError("empty generator in foldl1_async"))
+         }
+       );
   };
 
 /**
@@ -96,8 +119,6 @@ let foldl_async: (gen_async('a), ('b, 'a) => 'b, 'b) => async('b) =
  */
 let consume_async: (gen_async('a), 'a => 'b) => async(unit) =
   (gen, f) => {
-    open Js.Promise;
-
     let rec aux = nx =>
       switch (nx.done_, nx.value) {
       | (false, Some(v)) =>
@@ -111,11 +132,12 @@ let consume_async: (gen_async('a), 'a => 'b) => async(unit) =
 /**
  * Takes n elements from the async generator, and returns a new one of length n
  * ```reason
- *
+ * infinite_puppies
+ * ->take_async(5)
+ * // => async<"puppy1", "puppy2", ... , "puppy5">
  * ```
  */
 let take_async = (gen, n) => {
-  open Js.Promise;
   let i = ref(0);
 
   let aux = () =>
@@ -125,7 +147,7 @@ let take_async = (gen, n) => {
         switch (nx.done_, i^) {
         | (false, j) when j < n =>
           i := j + 1;
-          {value: nx.value, done_: false};
+          nx;
         | _ => {value: None, done_: true}
         }
     );
@@ -136,3 +158,61 @@ let take_async = (gen, n) => {
     throw: _ => {value: None, done_: true} |> resolve,
   };
 };
+
+/**
+ * Takes elements of the generator as long as the condition given is met. Returns a new async generator. 
+ */
+let take_while_async = (gen, f) => {
+  let aux = () =>
+    gen->next_async
+    >> (
+      nx =>
+        switch (nx.done_, nx.value) {
+        | (false, Some(v)) when f(v) => nx
+        | _ => {value: None, done_: true}
+        }
+    );
+
+  {
+    next: aux,
+    return: a => {value: Some(a), done_: true} |> resolve,
+    throw: _ => {value: None, done_: true} |> resolve,
+  };
+};
+
+/**
+ * Returns an async generator of the items which meet the condition given
+ */
+let keep_async: (gen_async('a), 'a => bool) => gen_async('a) =
+  (gen, f) => {
+    let aux: next('a) => next_async('a) =
+      p => {
+        let rec loop = v =>
+          switch (v.done_, v.value) {
+          | (false, Some(v)) =>
+            if (f(v)) {
+              Some(v) |> resolve;
+            } else {
+              gen->next_async |> then_(loop);
+            }
+          | (false, None) => gen->next_async |> then_(loop)
+          | _ => None |> resolve
+          };
+
+        loop(p)
+        >> (
+          p =>
+            switch (p) {
+            | Some(v) => {value: Some(v), done_: false}
+            | _ => {value: None, done_: true}
+            }
+        );
+      };
+
+    // Return a generator //
+    {
+      next: () => gen->next_async |> then_(aux),
+      return: a => {value: Some(a), done_: true} |> resolve,
+      throw: _ => {value: None, done_: true} |> resolve,
+    };
+  };
