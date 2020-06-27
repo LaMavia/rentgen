@@ -1,6 +1,6 @@
 {
   "name": "rentgen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "scripts": {
     "build": "bsb -make-world",
     "start": "bsb -make-world -w",
@@ -9,14 +9,13 @@
   "keywords": [
     "BuckleScript"
   ],
-  "type": "module",
   "author": "derivedmate",
   "license": "MIT",
   "devDependencies": {
     "bs-platform": "^7.3.2"
   },
   "description": "A ReasonML generator library, designed for Deno and Node",
-  "main": "src/BsGen.bs.js",
+  "main": "src/Rentgen.bs.js",
   "directories": {
     "lib": "lib"
   },

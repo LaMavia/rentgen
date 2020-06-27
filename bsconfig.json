@@ -1,12 +1,12 @@
 {
   "name": "rentgen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "sources": {
     "dir" : "src",
     "subdirs" : true
   },
   "package-specs": {
-    "module": "es6-global",
+    "module": "commonjs",
     "in-source": true
   },
   "suffix": ".bs.js",
