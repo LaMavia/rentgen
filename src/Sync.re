@@ -15,7 +15,7 @@ type gen('a) = {
 
 external from: 'a => gen('b) = "%identity";
 /**
- * Creates an int range.
+ * Creates a generator returning numbers from the range `<from; to_>` separated by the distance of `step`.
  * ```reason
  * range(~to_=10)->foldl((+), 0)
  * // => 55
@@ -71,7 +71,7 @@ let from_list: list('a) => gen('a) =
   };
 
 /**
- * Creates an infinite generator from an initial value and a succesor function.
+ * Creates an infinite generator from an initial value and a successor function.
  * ```reason
  * inf(0, a => a + 1) // => <0, 1, 2, 3, ...>
  * ```
@@ -198,7 +198,7 @@ let foldl: (gen('a), ('b, 'a) => 'b, 'b) => 'b =
   };
 
 /**
- * Folds a generator into a single value, taking the first value as `a0`.
+ * Folds a generator into a single value, taking the first value as the initial value.
  * ```reason
  * range(~to_=3, ~from=1,())
  * ->map(float_of_int)

@@ -12,7 +12,8 @@
   "author": "derivedmate",
   "license": "MIT",
   "devDependencies": {
-    "bs-platform": "^7.3.2"
+    "bs-platform": "^7.3.2",
+    "bsdoc": "^6.0.2-alpha"
   },
   "description": "A ReasonML generator library, designed for Deno and Node",
   "main": "src/Rentgen.bs.js",

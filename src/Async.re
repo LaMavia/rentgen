@@ -18,7 +18,7 @@ external throw_async: (gen_async('a), Js.Exn.t) => next_async('a) = "throw";
 external from_async: 'a => gen_async('b) = "%identity";
 
 /**
- * Converts an sync generator into an async one.
+ * Converts a sync generator into an async one.
  * ```reason
  * inf(1, a => a + 1)
  * ->from_sync
@@ -34,7 +34,7 @@ let from_sync: gen('a) => gen_async('a) =
   };
 
 /**
- * Transforms an async generator into a new one.
+ * Transforms an async generator using the function given.
  * ```reason
  * puppy_stream
  * -> map_async(pet)
@@ -130,7 +130,7 @@ let consume_async: (gen_async('a), 'a => 'b) => async(unit) =
   };
 
 /**
- * Takes n elements from the async generator, and returns a new one of length n
+ * Takes the first n elements from the async generator, and returns a new one of the length n
  * ```reason
  * infinite_puppies
  * ->take_async(5)
